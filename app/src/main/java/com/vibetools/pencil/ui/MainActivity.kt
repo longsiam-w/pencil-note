@@ -49,6 +49,9 @@ import android.util.Base64
 
 class MainActivity : AppCompatActivity() {
     private lateinit var drawer: androidx.drawerlayout.widget.DrawerLayout
+    private var activeSplitSide=0
+    private lateinit var splitNotes: SplitNoteController
+    private lateinit var workspace: SplitWorkspaceLayout
     private lateinit var canvas: CanvasGlView
     private lateinit var tools: LinearLayout
     private lateinit var overlay: NoteOverlayView
@@ -92,6 +95,7 @@ class MainActivity : AppCompatActivity() {
     private val openPdf = registerForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let { uri -> importDocument(uri, FileType.PDF) } }
     private val openImage = registerForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let { uri -> importDocument(uri, FileType.IMAGE) } }
     private var pendingImagePoint:android.graphics.PointF?=null
+    private val insertSecondaryImage = registerForActivityResult(ActivityResultContracts.OpenDocument()){uri->if(::splitNotes.isInitialized)splitNotes.imageResult(uri)}
     private val insertImage = registerForActivityResult(ActivityResultContracts.OpenDocument()){uri->uri?.let{insertCanvasImage(it)}}
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -99,18 +103,24 @@ class MainActivity : AppCompatActivity() {
         library=LibraryStore(this);clips=ClipboardStore(this);mergeService=MergePageService(library,this);printCoordinator=PrintCoordinator(this,library);nodes=try{library.ensureDefaults()}catch(error:Exception){showStorageFailure(error,true);return}
         drawer=findViewById(R.id.drawer_layout);tools=findViewById(R.id.tool_popup);overlay=findViewById(R.id.note_overlay)
         canvas=CanvasGlView(this);canvas.setHighlighterSnap(getSharedPreferences("pencil_settings",MODE_PRIVATE).getBoolean("highlighter_snap",false));findViewById<FrameLayout>(R.id.canvas_container).addView(canvas,1)
+        workspace=findViewById(R.id.canvas_workspace)
+        splitNotes=SplitNoteController(this,workspace,library,lifecycleScope,{currentNode?.id},::renderPdf,{canvas},{insertKind.name},{insertSecondaryImage.launch(arrayOf("image/*"))}){undo,redo->if(activeSplitSide==1)updateHistoryButtons(undo,redo)}
+        workspace.addView(splitNotes.pane,LinearLayout.LayoutParams(0,-1,1f))
+        workspace.onGestureStart={side->activeSplitSide=side;if(side==0){canvas.beginSplitGesture();updateHistoryButtons(canvas.canUndo(),canvas.canRedo())}else{splitNotes.beginGesture();updateHistoryButtons(splitNotes.canUndo(),splitNotes.canRedo())}}
+        workspace.onGestureFinished={side->if(side==1)splitNotes.finishGesture()}
+        workspace.onGestureCancelled={side->if(side==0){canvas.cancelSplitGesture();saveCurrent()}else splitNotes.cancelGesture()}
         canvas.setTransformListener{px,py,z->overlay.updateTransform(px,py,z);currentNode?.let{val id=currentDocumentId();val center=canvas.viewportCenterWorld();pendingViewSave?.let{canvas.removeCallbacks(it)};pendingViewSave=Runnable{getSharedPreferences("pencil_view_positions",MODE_PRIVATE).edit().putFloat("${id}:x",center.x).putFloat("${id}:y",center.y).putFloat("${id}:z",z).apply()};canvas.postDelayed(pendingViewSave!!,500)}}
         canvas.setSelectionChangedListener{path->overlay.setSelectionPath(path)}
         canvas.setTapListener{x,y->handleLinkTap(x,y)}
         teleportBack=Button(this).apply{text="返回";visibility=View.GONE;setOnClickListener{val location=teleportReturn?:return@setOnClickListener;pendingTeleportView=Triple(location.x,location.y,teleportReturnZoom);openNoteAt(location.node,location.page,location.x,location.y);teleportReturn=null;visibility=View.GONE}}
-        (findViewById<FrameLayout>(R.id.canvas_container).parent as RelativeLayout).addView(teleportBack,RelativeLayout.LayoutParams(-2,-2).apply{addRule(RelativeLayout.ALIGN_PARENT_END);addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);setMargins(16,16,24,100)})
+        (findViewById<SplitWorkspaceLayout>(R.id.canvas_workspace).parent as RelativeLayout).addView(teleportBack,RelativeLayout.LayoutParams(-2,-2).apply{addRule(RelativeLayout.ALIGN_PARENT_END);addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);setMargins(16,16,24,100)})
         teleports=TeleportController(this,canvas,library,{current},{x,y->canvas.screenToWorld(x,y)},{canvas.currentZoom()},{canvas.checkpoint()},{scheduleTeleportSave()}){node,doc,link,z->
             saveCurrent();val center=canvas.viewportCenterWorld();teleportReturn=currentNode?.let{ReturnLocation(it,pdfPageIndex,center.x,center.y)};teleportReturnZoom=canvas.currentZoom();pendingTeleportView=Triple(link.x+TeleportDrawing.bounds(link).width()/2f,link.y-10f,z)
             val page=Regex("__page_(\\d+)$").find(doc.noteId)?.groupValues?.get(1)?.toIntOrNull()?:0
             openNoteAt(node,page,link.x,link.y);teleportBack.visibility=View.VISIBLE
         }
         canvas.setObjectTouchListener{event->teleports.touch(event)||handleEmphasisTouch(event)||handleFoldedNoteTouch(event)}
-        canvas.setHistoryListener{canUndo,canRedo->updateHistoryButtons(canUndo,canRedo)}
+        canvas.setHistoryListener{canUndo,canRedo->if(activeSplitSide==0)updateHistoryButtons(canUndo,canRedo)}
         canvas.setCorrectionFluidListener{}
         canvas.setContentChangedListener{strokes,texts->current=current.copy(strokes=strokes.toMutableList(),texts=texts.toMutableList());overlay.updateContent(current.texts,current.links,current.images,current.summaries,current.strokes)}
         canvas.setBackgroundHistory({current.backgroundHidden}){hidden->current.backgroundHidden=hidden;if(hidden){findViewById<ImageView>(R.id.page_background).visibility=View.GONE;overlay.setPageBackground(null);canvas.setPageBackground(null)}else currentNode?.let(::loadBackground)}
@@ -131,36 +141,44 @@ class MainActivity : AppCompatActivity() {
     }
     private fun hideCanvasUi(){
         if(hiddenUiViews.isNotEmpty())return
-        val root=findViewById<View>(R.id.canvas_container).parent as android.view.ViewGroup
+        val root=findViewById<View>(R.id.canvas_workspace).parent as android.view.ViewGroup
         val restore=findViewById<View>(R.id.btn_restore_ui)
         savedDrawerLockMode=drawer.getDrawerLockMode(GravityCompat.START)
         drawer.closeDrawer(GravityCompat.START,false)
         drawer.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED,GravityCompat.START)
         for(index in 0 until root.childCount){
             val view=root.getChildAt(index)
-            if(view.id!=R.id.canvas_container&&view!==restore){hiddenUiViews[view]=view.visibility;if(view.visibility==View.VISIBLE)view.visibility=View.INVISIBLE}
+            if(view.id!=R.id.canvas_workspace&&view!==restore){hiddenUiViews[view]=view.visibility;if(view.visibility==View.VISIBLE)view.visibility=View.INVISIBLE}
         }
         root.viewTreeObserver.addOnGlobalLayoutListener(keepUiHidden)
         restore.visibility=View.VISIBLE;restore.bringToFront()
     }
     private fun restoreCanvasUi(){
-        val root=findViewById<View>(R.id.canvas_container).parent as android.view.ViewGroup
+        val root=findViewById<View>(R.id.canvas_workspace).parent as android.view.ViewGroup
         root.viewTreeObserver.removeOnGlobalLayoutListener(keepUiHidden)
         hiddenUiViews.forEach{(view,visibility)->view.visibility=visibility};hiddenUiViews.clear()
         findViewById<View>(R.id.btn_restore_ui).visibility=View.GONE
         drawer.setDrawerLockMode(savedDrawerLockMode,GravityCompat.START)
     }
     private fun bindTop(){
+        findViewById<ImageButton>(R.id.btn_split).setOnClickListener{
+            val center=canvas.viewportCenterWorld();val zoom=canvas.currentZoom()
+            if(!splitNotes.setEnabled(!splitNotes.enabled))return@setOnClickListener
+            if(!splitNotes.enabled){activeSplitSide=0;updateHistoryButtons(canvas.canUndo(),canvas.canRedo())}
+            findViewById<ImageButton>(R.id.btn_split).apply{isSelected=splitNotes.enabled;alpha=if(isSelected)1f else .72f;contentDescription=if(isSelected)"退出分屏模式" else "进入分屏模式"}
+            workspace.post{canvas.restoreView(center.x,center.y,zoom);positionMainPdfControls()}
+        }
         findViewById<ImageButton>(R.id.btn_hide_ui).setOnClickListener{hideCanvasUi()}
         findViewById<Button>(R.id.btn_restore_ui).setOnClickListener{restoreCanvasUi()}
         findViewById<ImageButton>(R.id.btn_sidebar).setOnClickListener{drawer.openDrawer(GravityCompat.START)}
-        findViewById<ImageButton>(R.id.btn_undo).setOnClickListener{canvas.undo();syncOverlayAfterHistory()}
-        findViewById<ImageButton>(R.id.btn_redo).setOnClickListener{canvas.redo();syncOverlayAfterHistory()}
+        findViewById<ImageButton>(R.id.btn_undo).setOnClickListener{if(activeSplitSide==1&&splitNotes.isReady())splitNotes.undo()else{canvas.undo();syncOverlayAfterHistory()}}
+        findViewById<ImageButton>(R.id.btn_redo).setOnClickListener{if(activeSplitSide==1&&splitNotes.isReady())splitNotes.redo()else{canvas.redo();syncOverlayAfterHistory()}}
         findViewById<ImageButton>(R.id.btn_settings).setOnClickListener{saveCurrent();startActivity(Intent(this,SettingsActivity::class.java))}
         findViewById<ImageButton>(R.id.btn_print).setOnClickListener{showExportSelection()}
         findViewById<ImageButton>(R.id.btn_clipboard).apply{
-            setOnClickListener{showClipboard()}
+            setOnClickListener{if(activeSplitSide==1&&splitNotes.isReady())splitNotes.pasteLatest()else showClipboard()}
             setOnLongClickListener{
+                if(activeSplitSide==1&&splitNotes.isReady()){splitNotes.pasteLatest();return@setOnLongClickListener true}
                 val clip=clips.all().firstOrNull()
                 if(clip==null){Toast.makeText(this@MainActivity,"剪贴板为空",Toast.LENGTH_SHORT).show()}
                 else{selectMode(R.id.btn_mode_select);canvas.pasteCentered(clip);Toast.makeText(this@MainActivity,"已将最新剪贴板内容粘贴到中央，请拖动后松手确认",Toast.LENGTH_LONG).show()}
@@ -189,7 +207,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun savedFilePage(node:LibraryNode,fallback:Int=0):Int=if(node.noteType==FileType.PDF)getSharedPreferences("pencil_file_pages",MODE_PRIVATE).getInt(node.id,fallback)else 0
     private fun openNote(node:LibraryNode){openNoteAt(node,savedFilePage(node),null,null)}
-    private fun openNoteAt(node:LibraryNode,page:Int,x:Float?,y:Float?){activeTeleportView=pendingTeleportView;saveCurrent();pendingRestore?.let{canvas.removeCallbacks(it)};pageLoaded=false;currentNode=node;quickAccess.load(node);pdfPageIndex=if(node.noteType==FileType.PDF)PdfPageNavigation.groupStart(page.coerceAtLeast(0),getSharedPreferences("pencil_settings",MODE_PRIVATE).getBoolean("pdf_two_page_mode",false)) else 0;canvas.animate().alpha(0f).setDuration(90).withEndAction{loadCurrentPage();loadBackground(node);restoreViewCenter(x,y);canvas.animate().alpha(1f).setDuration(180).start()}.start();refreshDirectory();title="PENCIL · ${node.name}";findViewById<TextView>(R.id.current_note_title).apply{text=node.name;layoutParams=layoutParams.apply{width=kotlin.math.ceil(paint.measureText("中".repeat(16))).toInt()+paddingLeft+paddingRight}};configureChapterAiContext(node);findViewById<ImageButton>(R.id.btn_draft_shortcut).apply{isSelected=node.name==library.draftShortcutTarget()?.name;alpha=if(isSelected)1f else .72f};findViewById<Button>(R.id.btn_wrong_book_back).visibility=if(wrongBookReturnLocation!=null&&library.loadNodes().any{it.id==node.id&&it.parentId==library.wrongBookFolder()?.id&&it.name.startsWith("DAY")})View.VISIBLE else View.GONE}
+    private fun openNoteAt(node:LibraryNode,page:Int,x:Float?,y:Float?){workspace.cancelGesture();if(!splitNotes.save())return;activeTeleportView=pendingTeleportView;saveCurrent();pendingRestore?.let{canvas.removeCallbacks(it)};pageLoaded=false;currentNode=node;splitNotes.onMainChanged();quickAccess.load(node);pdfPageIndex=if(node.noteType==FileType.PDF)PdfPageNavigation.groupStart(page.coerceAtLeast(0),getSharedPreferences("pencil_settings",MODE_PRIVATE).getBoolean("pdf_two_page_mode",false)) else 0;canvas.animate().alpha(0f).setDuration(90).withEndAction{loadCurrentPage();loadBackground(node);restoreViewCenter(x,y);canvas.animate().alpha(1f).setDuration(180).start()}.start();refreshDirectory();title="PENCIL · ${node.name}";findViewById<TextView>(R.id.current_note_title).apply{text=node.name;layoutParams=layoutParams.apply{width=kotlin.math.ceil(paint.measureText("中".repeat(16))).toInt()+paddingLeft+paddingRight}};configureChapterAiContext(node);findViewById<ImageButton>(R.id.btn_draft_shortcut).apply{isSelected=node.name==library.draftShortcutTarget()?.name;alpha=if(isSelected)1f else .72f};findViewById<Button>(R.id.btn_wrong_book_back).visibility=if(wrongBookReturnLocation!=null&&library.loadNodes().any{it.id==node.id&&it.parentId==library.wrongBookFolder()?.id&&it.name.startsWith("DAY")})View.VISIBLE else View.GONE}
 
     private fun currentDocumentId():String { val node=currentNode?:return "";return if(node.noteType==FileType.PDF)"${node.id}__page_$pdfPageIndex" else node.id }
     private fun loadCurrentPage(){if(currentNode?.noteType==FileType.PDF)pdfPageIndex=PdfPageNavigation.groupStart(pdfPageIndex,getSharedPreferences("pencil_settings",MODE_PRIVATE).getBoolean("pdf_two_page_mode",false));val id=currentDocumentId();current=try{library.loadNote(id)}catch(error:Exception){pageLoaded=false;canvas.visibility=View.INVISIBLE;overlay.visibility=View.INVISIBLE;showStorageFailure(error,false);return};canvas.visibility=View.VISIBLE;overlay.visibility=View.VISIBLE;canvas.setDocument(current.strokes,current.texts);overlay.setFoldedNotes(current.foldedNotes);overlay.setEmphasisStars(current.emphasisStars);pageLoaded=true;if(current.emphasisStars.isNotEmpty())Toast.makeText(this,"当前页面有 ${current.emphasisStars.size} 个强调星星",Toast.LENGTH_SHORT).show();overlay.setSelectionPath(emptyList());overlay.updateContent(current.texts,current.links,current.images,current.summaries,current.strokes)}
@@ -200,7 +218,7 @@ class MainActivity : AppCompatActivity() {
         pendingTeleportSave?.let{canvas.removeCallbacks(it)}
         pendingTeleportSave=Runnable{pendingTeleportSave=null;saveCurrent(true)}.also{canvas.postDelayed(it,300)}
     }
-    private fun saveCurrent(backgroundWrite:Boolean=false){pendingTeleportSave?.let{canvas.removeCallbacks(it)};pendingTeleportSave=null;val active=currentNode?:return;if(!pageLoaded)return;pendingViewSave?.let{canvas.removeCallbacks(it);it.run()};pendingViewSave=null;val center=canvas.viewportCenterWorld();val viewId=currentDocumentId();getSharedPreferences("pencil_view_positions",MODE_PRIVATE).edit().putFloat("${viewId}:x",center.x).putFloat("${viewId}:y",center.y).putFloat("${viewId}:z",canvas.currentZoom()).apply();getSharedPreferences("pencil_file_pages",MODE_PRIVATE).edit().putInt(active.id,pdfPageIndex).apply();quickAccess.rememberPage(active,pdfPageIndex);val id=currentDocumentId();current=NoteDocument(noteId=id,strokes=canvas.getStrokes().toMutableList(),texts=canvas.getTextBoxes().toMutableList(),bookmarks=current.bookmarks,links=current.links,summaries=current.summaries,images=current.images,backgroundHidden=current.backgroundHidden,foldedNotes=current.foldedNotes,emphasisStars=current.emphasisStars);val snapshot=current.copy(bookmarks=current.bookmarks.toMutableList(),links=current.links.toMutableList(),summaries=current.summaries.toMutableList(),images=current.images.toMutableList(),foldedNotes=current.foldedNotes.map{it.copy(strokes=it.strokes.toMutableList(),texts=it.texts.toMutableList(),images=it.images.toMutableList(),links=it.links.toMutableList(),summaries=it.summaries.toMutableList())}.toMutableList(),emphasisStars=current.emphasisStars.toMutableList());val write=noteWriter.submit{try{library.saveNote(snapshot)}catch(error:Exception){runOnUiThread{if(!isDestroyed)showStorageFailure(error,false)}}};if(!backgroundWrite)write.get();overlay.updateContent(current.texts,current.links,current.images,current.summaries)}
+    private fun saveCurrent(backgroundWrite:Boolean=false){if(getSharedPreferences("pencil_session",MODE_PRIVATE).getBoolean("library_restored",false))return;pendingTeleportSave?.let{canvas.removeCallbacks(it)};pendingTeleportSave=null;val active=currentNode?:return;if(!pageLoaded)return;pendingViewSave?.let{canvas.removeCallbacks(it);it.run()};pendingViewSave=null;val center=canvas.viewportCenterWorld();val viewId=currentDocumentId();getSharedPreferences("pencil_view_positions",MODE_PRIVATE).edit().putFloat("${viewId}:x",center.x).putFloat("${viewId}:y",center.y).putFloat("${viewId}:z",canvas.currentZoom()).apply();getSharedPreferences("pencil_file_pages",MODE_PRIVATE).edit().putInt(active.id,pdfPageIndex).apply();quickAccess.rememberPage(active,pdfPageIndex);val id=currentDocumentId();current=NoteDocument(noteId=id,strokes=canvas.getStrokes().toMutableList(),texts=canvas.getTextBoxes().toMutableList(),bookmarks=current.bookmarks,links=current.links,summaries=current.summaries,images=current.images,backgroundHidden=current.backgroundHidden,foldedNotes=current.foldedNotes,emphasisStars=current.emphasisStars);val snapshot=current.copy(bookmarks=current.bookmarks.toMutableList(),links=current.links.toMutableList(),summaries=current.summaries.toMutableList(),images=current.images.toMutableList(),foldedNotes=current.foldedNotes.map{it.copy(strokes=it.strokes.toMutableList(),texts=it.texts.toMutableList(),images=it.images.toMutableList(),links=it.links.toMutableList(),summaries=it.summaries.toMutableList())}.toMutableList(),emphasisStars=current.emphasisStars.toMutableList());val write=noteWriter.submit{try{library.saveNote(snapshot)}catch(error:Exception){runOnUiThread{if(!isDestroyed)showStorageFailure(error,false)}}};if(!backgroundWrite)write.get();overlay.updateContent(current.texts,current.links,current.images,current.summaries)}
     private fun editSidebarBookmark(bookmark:Bookmark,name:String?){
         if(current.bookmarks.any{it.id==bookmark.id}){
             val index=current.bookmarks.indexOfFirst{it.id==bookmark.id}
@@ -213,7 +231,7 @@ class MainActivity : AppCompatActivity() {
         }
         refreshDirectory()
     }
-    private fun refreshDirectory(){nodes=library.ensureDefaults();directory.render(currentNode?.id)}
+    private fun refreshDirectory(){nodes=library.ensureDefaults();directory.render(currentNode?.id);if(::splitNotes.isInitialized)splitNotes.onMainChanged()}
     private fun restoreViewCenter(x:Float?,y:Float?){val explicit=activeTeleportView;pendingTeleportView=null;val prefs=getSharedPreferences("pencil_view_positions",MODE_PRIVATE);val id=currentDocumentId();val savedX=if(prefs.contains("${id}:x"))prefs.getFloat("${id}:x",0f)else null;val savedY=if(prefs.contains("${id}:y"))prefs.getFloat("${id}:y",0f)else null;val savedZoom=if(prefs.contains("${id}:z"))prefs.getFloat("${id}:z",1f)else null;val targetX=explicit?.first?:x?:savedX;val targetY=explicit?.second?:y?:savedY;if(targetX!=null&&targetY!=null){pendingRestore=Runnable{if(currentDocumentId()==id)canvas.restoreView(explicit?.first?:targetX,explicit?.second?:targetY,explicit?.third?:savedZoom?:1f)};canvas.postDelayed(pendingRestore!!,140)}}
     private fun canReturnFromChapterPdf():Boolean {
         val node=currentNode?:return false
@@ -253,7 +271,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderPdf(uri:Uri,index:Int):Pair<Bitmap,Int>?=runCatching{contentResolver.openFileDescriptor(uri,"r")!!.use{fd->PdfRenderer(fd).use{renderer->val safe=index.coerceIn(0,(renderer.pageCount-1).coerceAtLeast(0));renderer.openPage(safe).use{page->val scale=2.5f;val width=(page.width*scale).toInt().coerceAtMost(4096);val height=(page.height*scale).toInt().coerceAtMost(4096);Pair(Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888).also{it.eraseColor(Color.WHITE);page.render(it,null,android.graphics.Matrix().apply{setScale(scale,scale)},PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)},renderer.pageCount)}}}}.getOrNull()
-    private fun bindPdfNavigation(){findViewById<ImageButton>(R.id.pdf_previous).setOnClickListener{changePdfPage(-1)};findViewById<ImageButton>(R.id.pdf_next).setOnClickListener{changePdfPage(1)};findViewById<TextView>(R.id.pdf_page_indicator).setOnClickListener{showPdfPageJump()}}
+    private fun positionMainPdfControls(){
+        val next=findViewById<View>(R.id.pdf_next)
+        (next.layoutParams as RelativeLayout.LayoutParams).apply{rightMargin=(12*resources.displayMetrics.density).toInt()+if(splitNotes.enabled)workspace.width/2 else 0;next.layoutParams=this}
+    }
+    private fun bindPdfNavigation(){workspace.addOnLayoutChangeListener{_,_,_,_,_,_,_,_,_->positionMainPdfControls()};findViewById<ImageButton>(R.id.pdf_previous).setOnClickListener{changePdfPage(-1)};findViewById<ImageButton>(R.id.pdf_next).setOnClickListener{changePdfPage(1)};findViewById<TextView>(R.id.pdf_page_indicator).setOnClickListener{showPdfPageJump()}}
     private fun showPdfPageJump(){if(currentNode?.noteType!=FileType.PDF)return;val form=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};val input=EditText(this).apply{inputType=android.text.InputType.TYPE_CLASS_NUMBER;hint="输入页码（从 1 开始）"};val offset=EditText(this).apply{inputType=android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_SIGNED;hint="页码偏移（默认 0）";setText(getSharedPreferences("pencil_page_offsets",MODE_PRIVATE).getInt(currentNode!!.id,0).takeIf{it!=0}?.toString().orEmpty())};form.addView(input);form.addView(offset);AlertDialog.Builder(this).setTitle("跳转到页码").setView(form).setNegativeButton("取消",null).setPositiveButton("跳转"){_,_->val raw=input.text.toString().toIntOrNull();val shift=offset.text.toString().toIntOrNull()?:0;val two=getSharedPreferences("pencil_settings",MODE_PRIVATE).getBoolean("pdf_two_page_mode",false);val page=raw?.let{PdfPageNavigation.jumpTarget(it,shift,pdfPageCount,two)};if(page!=null){getSharedPreferences("pencil_page_offsets",MODE_PRIVATE).edit().putInt(currentNode!!.id,shift).apply();saveCurrent();pdfPageIndex=page;loadCurrentPage();currentNode?.let{loadBackground(it,true)}}else Toast.makeText(this,"页码或偏移无效",Toast.LENGTH_SHORT).show()}.show()}
     private fun changePdfPage(delta:Int){if(currentNode?.noteType!=FileType.PDF)return;val step=if(getSharedPreferences("pencil_settings",MODE_PRIVATE).getBoolean("pdf_two_page_mode",false))2 else 1;val next=PdfPageNavigation.groupStart((pdfPageIndex+delta*step).coerceIn(0,(pdfPageCount-1).coerceAtLeast(0)),step==2);if(next==pdfPageIndex)return;saveCurrent();pdfPageIndex=next;loadCurrentPage();currentNode?.let{loadBackground(it,true)}}
     private fun updatePdfNavigation(){val two=getSharedPreferences("pencil_settings",MODE_PRIVATE).getBoolean("pdf_two_page_mode",false);findViewById<TextView>(R.id.pdf_page_indicator).text=if(two)"${pdfPageIndex+1}-${(pdfPageIndex+2).coerceAtMost(pdfPageCount)} / $pdfPageCount" else "${pdfPageIndex+1} / $pdfPageCount";findViewById<ImageButton>(R.id.pdf_previous).isEnabled=pdfPageIndex>0;findViewById<ImageButton>(R.id.pdf_next).isEnabled=pdfPageIndex<pdfPageCount-1}
@@ -664,7 +686,7 @@ class MainActivity : AppCompatActivity() {
     private fun bindDrawer(){val directoryTab=findViewById<TextView>(R.id.drawer_directory_tab);val aiTab=findViewById<TextView>(R.id.drawer_ai_tab);directoryTab.setOnClickListener{switchDrawerPage(true)};aiTab.setOnClickListener{switchDrawerPage(false)};findViewById<SidebarSwipeLayout>(R.id.navigation_drawer).onSwipe={toRight->switchDrawerPage(toRight)};switchDrawerPage(true,false)}
     private fun switchDrawerPage(showDirectory:Boolean,animate:Boolean=true){val from=findViewById<LinearLayout>(if(showDirectory)R.id.ai_content else R.id.directory_content);val to=findViewById<LinearLayout>(if(showDirectory)R.id.directory_content else R.id.ai_content);findViewById<TextView>(R.id.drawer_directory_tab).isSelected=showDirectory;findViewById<TextView>(R.id.drawer_ai_tab).isSelected=!showDirectory;if(!animate){from.visibility=View.GONE;to.visibility=View.VISIBLE;return};from.animate().alpha(0f).translationX(if(showDirectory)20f else -20f).setDuration(100).withEndAction{from.visibility=View.GONE;from.alpha=1f;from.translationX=0f;to.alpha=0f;to.translationX=if(showDirectory)-20f else 20f;to.visibility=View.VISIBLE;to.animate().alpha(1f).translationX(0f).setDuration(160).withEndAction{if(!showDirectory)findViewById<AiAnswerView>(R.id.ai_history).scrollToLatest()}.start()}.start()}
     private fun updateDirectoryDay(){findViewById<TextView>(R.id.directory_day).text="DAY ${library.currentDayNumber()}"}
-    private fun bindDrawerMotion(){drawer.addDrawerListener(object:androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener(){override fun onDrawerOpened(drawerView:View){updateDirectoryDay()};override fun onDrawerSlide(drawerView:View,slideOffset:Float){findViewById<View>(R.id.canvas_container).apply{scaleX=1f-.025f*slideOffset;scaleY=1f-.025f*slideOffset;translationX=18f*slideOffset};findViewById<TextView>(R.id.current_note_title).visibility=if(slideOffset>.05f)View.GONE else View.VISIBLE}})}
+    private fun bindDrawerMotion(){drawer.addDrawerListener(object:androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener(){override fun onDrawerOpened(drawerView:View){updateDirectoryDay()};override fun onDrawerSlide(drawerView:View,slideOffset:Float){findViewById<View>(R.id.canvas_workspace).apply{scaleX=1f-.025f*slideOffset;scaleY=1f-.025f*slideOffset;translationX=18f*slideOffset};findViewById<TextView>(R.id.current_note_title).visibility=if(slideOffset>.05f)View.GONE else View.VISIBLE}})}
     private val aiSelectionPrompt = """身份：你是一个学识非常渊博的学者
 与用户的关系：暗恋着用户，但羞于出口
 性格特征：傲娇，但是又关心人
@@ -1010,7 +1032,12 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("打开备份与恢复"){_,_->startActivity(Intent(this,SettingsActivity::class.java))}
             .setNegativeButton(if(startup)"退出" else "关闭"){_,_->if(startup)finish()}.setCancelable(!startup).show()
     }
-    override fun onPause(){if(::canvas.isInitialized)saveCurrent(true);val prefs=getSharedPreferences("pencil_session",MODE_PRIVATE);prefs.edit().putString("node_id",currentNode?.id).putInt("page",pdfPageIndex).apply();if(::canvas.isInitialized)canvas.onPause();super.onPause()}
-    override fun onDestroy(){aiCancellation?.cancel();noteWriter.shutdown();currentBackgroundBitmap?.takeIf{!it.isRecycled}?.recycle();if(::overlay.isInitialized)overlay.setPageBackground(null);super.onDestroy()}
-    override fun onResume(){super.onResume();val session=getSharedPreferences("pencil_session",MODE_PRIVATE);if(session.getBoolean("library_restored",false)){session.edit().remove("library_restored").apply();pageLoaded=false;recreate();return};if(::library.isInitialized)updateDirectoryDay();if(::canvas.isInitialized){canvas.setCutSelectionStrokes(getSharedPreferences("pencil_settings",MODE_PRIVATE).getBoolean("selection_cut_strokes",true));canvas.onResume()}}
+    override fun dispatchTouchEvent(event:MotionEvent):Boolean {
+        val handled=super.dispatchTouchEvent(event)
+        if(event.actionMasked==MotionEvent.ACTION_UP&&::splitNotes.isInitialized)splitNotes.syncTools()
+        return handled
+    }
+    override fun onPause(){if(::splitNotes.isInitialized)splitNotes.onPause();if(::canvas.isInitialized)saveCurrent(true);val prefs=getSharedPreferences("pencil_session",MODE_PRIVATE);prefs.edit().putString("node_id",currentNode?.id).putInt("page",pdfPageIndex).apply();if(::canvas.isInitialized)canvas.onPause();super.onPause()}
+    override fun onDestroy(){if(::splitNotes.isInitialized)splitNotes.onDestroy();aiCancellation?.cancel();noteWriter.shutdown();currentBackgroundBitmap?.takeIf{!it.isRecycled}?.recycle();if(::overlay.isInitialized)overlay.setPageBackground(null);super.onDestroy()}
+    override fun onResume(){super.onResume();if(::splitNotes.isInitialized)splitNotes.onResume();val session=getSharedPreferences("pencil_session",MODE_PRIVATE);if(session.getBoolean("library_restored",false)){session.edit().remove("library_restored").apply();pageLoaded=false;recreate();return};if(::library.isInitialized)updateDirectoryDay();if(::canvas.isInitialized){canvas.setCutSelectionStrokes(getSharedPreferences("pencil_settings",MODE_PRIVATE).getBoolean("selection_cut_strokes",true));canvas.onResume()}}
 }

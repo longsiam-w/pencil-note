@@ -130,7 +130,12 @@ class CanvasGlView(context: Context) : GLSurfaceView(context) {
     fun setSelectionChangedListener(listener:(List<PointF>)->Unit){selectionChangedListener=listener}
     fun setSelectionFinishedListener(listener:()->Unit){selectionFinishedListener=listener}
     fun setCutSelectionStrokes(enabled:Boolean){cutSelectionStrokes=enabled}
-    fun setDocument(strokes: List<Stroke>, texts: List<TextBox>) { queueEvent { renderer.setStrokes(strokes); renderer.setTextBoxes(texts); undoStack.clear(); redoStack.clear(); post { notifyHistory(); requestRender() } } }
+    fun setDocument(strokes: List<Stroke>, texts: List<TextBox>) {
+        // Renderer mutations are synchronized; publish document identity before accepting another touch/save.
+        renderer.setStrokes(strokes); renderer.setTextBoxes(texts)
+        undoStack.clear(); redoStack.clear(); splitGestureState=null
+        notifyHistory(); requestRender()
+    }
     fun setPageBackground(bitmap:Bitmap?,forceFit:Boolean=false){
         queueEvent {
             val hadBackground=renderer.hasBackground()
@@ -212,11 +217,61 @@ class CanvasGlView(context: Context) : GLSurfaceView(context) {
     fun restoreView(centerX:Float,centerY:Float,zoom:Float){queueEvent{renderer.setView(centerX,centerY,zoom,width.toFloat(),height.toFloat());post{transformListener?.invoke(renderer.panXValue(),renderer.panYValue(),renderer.zoomValue());requestRender()}}}
     fun screenToWorld(x: Float, y: Float): PointF = renderer.toWorld(x, y)
 
+    /** The same bottom toolbar configures both views; document/history remain separate. */
+    fun copyToolsFrom(source: CanvasGlView) {
+        if (mode != source.mode) clearSelection()
+        mode=source.mode; writeTool=source.writeTool; eraserTool=source.eraserTool
+        color=source.color; strokeWidth=source.strokeWidth; textFontSize=source.textFontSize
+        highlighterSnap=source.highlighterSnap; correctionActive=source.correctionActive
+        eraserSize=source.eraserSize; selectionStyle=source.selectionStyle; cutSelectionStrokes=source.cutSelectionStrokes
+    }
+    fun currentMode() = mode
+    fun afterPendingChanges(action: () -> Unit) { queueEvent { post { action() } } }
+    private var splitGestureState: HistoryState? = null
+    private var splitUndo: List<HistoryState> = emptyList()
+    private var splitRedo: List<HistoryState> = emptyList()
+    private var deferredInsert: PointF? = null
+    private var touchDownX=0f
+    private var touchDownY=0f
+    fun beginSplitGesture() { splitGestureState = snapshot(); splitUndo=undoStack.toList(); splitRedo=redoStack.toList(); deferredInsert=null }
+    fun cancelSplitGesture() {
+        val before = splitGestureState ?: return
+        splitGestureState = null
+        deferredInsert = null
+        val cancel = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_CANCEL, lastX, lastY, 0)
+        objectTouchListener?.invoke(cancel); cancel.recycle()
+        undoStack.clear(); undoStack.addAll(splitUndo); redoStack.clear(); redoStack.addAll(splitRedo)
+        activeStroke = null; pendingHistory = null; gestureTransforming = false; suppressSingleTouch = true
+        selectionStart = null; freeformPoints.clear()
+        // Restore the viewport immediately so saving or the next gesture cannot observe a cancelled pan.
+        renderer.setView(before.centerX, before.centerY, before.zoom, width.toFloat(), height.toFloat())
+        transformListener?.invoke(renderer.panXValue(), renderer.panYValue(), renderer.zoomValue())
+        clearSelection(); movingSelection=false; moveStartState=null
+        renderer.setStrokes(before.strokes); renderer.setTextBoxes(before.texts)
+        before.extras?.let { extrasRestorer?.invoke(it) }
+        if ((backgroundStateProvider?.invoke() ?: false) != before.backgroundHidden) backgroundStateRestorer?.invoke(before.backgroundHidden)
+        notifyContentChanged(); notifyHistory()
+        requestRender()
+    }
+
     private fun queue(action: () -> Unit) { queueEvent { action(); val s=renderer.snapshotStrokes();val t=renderer.snapshotTexts();post{requestRender();contentChangedListener?.invoke(s,t)} } }
     private fun notifyContentChanged(){contentChangedListener?.invoke(renderer.snapshotStrokes(),renderer.snapshotTexts())}
     private fun notifySelectionChanged(){selectionChangedListener?.invoke(selectionPolygon.toList())}
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_CANCEL && splitGestureState != null) {
+            cancelSplitGesture(); return true
+        }
+        if (event.actionMasked == MotionEvent.ACTION_UP) {
+            val insert = deferredInsert
+            deferredInsert = null
+            if (insert != null && !suppressSingleTouch && kotlin.math.hypot(event.x-touchDownX,event.y-touchDownY) < android.view.ViewConfiguration.get(context).scaledTouchSlop) {
+                splitGestureState = null
+                insertRequestedListener?.invoke(insert.x, insert.y)
+                return true
+            }
+            splitGestureState = null
+        }
         if(mode!=Mode.SELECT&&!movingSelection&&objectTouchListener?.invoke(event)==true)return true
         if(event.actionMasked==MotionEvent.ACTION_DOWN)suppressSingleTouch=false
         if(event.pointerCount>1){
@@ -247,7 +302,7 @@ class CanvasGlView(context: Context) : GLSurfaceView(context) {
         val y = event.y
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                lastX = x; lastY = y; moved = false
+                lastX = x; lastY = y; touchDownX=x; touchDownY=y; moved = false
                 if(mode==Mode.SELECT&&movingSelection){
                     val world=renderer.toWorld(x,y)
                     val currentSelection=selection
@@ -262,7 +317,7 @@ class CanvasGlView(context: Context) : GLSurfaceView(context) {
                     Mode.WRITE -> { pendingHistory=snapshot();val pressure=event.pressure.coerceIn(.25f,1.5f);val width=if(writeTool==Tool.HIGHLIGHTER)strokeWidth else strokeWidth*pressure;activeStroke = Stroke(UUID.randomUUID().toString(), writeTool, color, width, if (writeTool == Tool.HIGHLIGHTER) 110 else 255).also { val world=renderer.toWorld(x,y); it.points.add(world); it.points.add(world); renderer.addOrUpdateStroke(it); requestRender(); notifyContentChanged() } }
                     Mode.ERASE -> { pendingHistory=snapshot();eraseAt(x, y) }
                     Mode.SELECT -> { selectionStart = renderer.toWorld(x, y); freeformPoints.clear(); selection = null; selectionPolygon=emptyList(); renderer.setSelection(emptyList()); if (selectionStyle == SelectionStyle.FREEFORM) freeformPoints += selectionStart!!; notifySelectionChanged() }
-                    Mode.INSERT -> insertRequestedListener?.invoke(x, y)
+                    Mode.INSERT -> if(splitGestureState != null) deferredInsert=PointF(x,y) else insertRequestedListener?.invoke(x, y)
                     else -> Unit
                 }
                 return true
@@ -290,7 +345,7 @@ class CanvasGlView(context: Context) : GLSurfaceView(context) {
                     requestRender();return true
                 }
                 if (mode == Mode.SELECT && selection != null && hasValidSelection() && !movingSelection && event.actionMasked==MotionEvent.ACTION_UP) { val before=snapshot();if(cutSelectionStrokes&&renderer.splitSelection(selection!!,selectionPolygon)){pushHistoryState(before);notifyContentChanged()};selectionFinishedListener?.invoke() }
-                if (mode == Mode.DRAG && !moved) { performClick();val p=renderer.toWorld(x,y);tapListener?.invoke(p.x,p.y) }
+                if (mode == Mode.DRAG && !moved && event.actionMasked == MotionEvent.ACTION_UP) { performClick();val p=renderer.toWorld(x,y);tapListener?.invoke(p.x,p.y) }
                 val s=renderer.snapshotStrokes();val t=renderer.snapshotTexts();post{contentChangedListener?.invoke(s,t)}
                 requestRender(); return true
             }
