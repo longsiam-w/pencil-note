@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PENCIL</string>
+    
+    <!-- 侧边栏 -->
+    <string name="tab_directory">目录</string>
+    <string name="tab_ai">AI</string>
+    <string name="open_sidebar">打开侧边栏</string>
+    <string name="undo">撤回</string>
+    <string name="redo">重做</string>
+    <string name="directory_root">目录</string>
+    <string name="ai_placeholder_title">AI 面板</string>
+    
+    <!-- 模式 -->
+    <string name="mode_drag">拖拽</string>
+    <string name="mode_write">写入</string>
+    <string name="mode_insert">插入</string>
+    <string name="mode_select">框选</string>
+    <string name="mode_erase">清除</string>
+    
+    <!-- 写入工具 -->
+    <string name="tool_pen">钢笔</string>
+    <string name="tool_pencil">铅笔</string>
+    <string name="tool_highlighter">荧光笔</string>
+    <string name="tool_text">文本</string>
+    
+    <!-- 清除工具 -->
+    <string name="tool_eraser">橡皮擦</string>
+    <string name="tool_sand_eraser">砂擦</string>
+    <string name="tool_correction_fluid">涂改液</string>
+    
+    <!-- 插入工具 -->
+    <string name="insert_bookmark">书签</string>
+    <string name="insert_summary">总结</string>
+    <string name="insert_hyperlink">超链接</string>
+    <string name="insert_image">图片</string>
+    
+    <!-- 右上角工具栏 -->
+    <string name="settings">设置</string>
+    <string name="print">打印</string>
+    <string name="clipboard">剪贴板</string>
+    <string name="merge_pages">合并页</string>
+    
+    <!-- 颜色选择 -->
+    <string name="color_black">黑色</string>
+    <string name="color_red">红色</string>
+    <string name="color_blue">蓝色</string>
+    <string name="color_yellow">黄色</string>
+    <string name="color_green">绿色</string>
+    <string name="color_custom">自定义</string>
+    
+    <!-- AI功能 -->
+    <string name="ai_frame_select">框选</string>
+    <string name="ai_recognize">识别</string>
+    <string name="ai_send">发送</string>
+    <string name="ai_clear">清空</string>
+    <string name="ai_processing">处理中……</string>
+    <string name="ai_prompt_hint">请输入提示词</string>
+    <string name="pdf_preview_title">PDF预览（共%d页）</string>
+    <string name="pdf_import_first_page">导入第一页</string>
+    <string name="text_input_hint">请输入文本</string>
+    <string name="hyperlink_input_hint">请输入链接或编号</string>
+    <string name="select_actions">框选操作</string>
+    
+    <!-- 框选模式 -->
+    <string name="select_rectangle">矩形框选</string>
+    <string name="select_freeform">自由框选</string>
+    <string name="select_copy">复制</string>
+    <string name="select_cut">剪切</string>
+    <string name="select_delete">删除</string>
+    <string name="select_confirm">确认</string>
+    <string name="select_cancel">取消</string>
+    
+    <!-- 书签和总结 -->
+    <string name="bookmark_name_hint">书签名称</string>
+    <string name="summary_chapter_title">章节标题</string>
+    <string name="summary_concepts">概念自查表</string>
+    <string name="summary_memory">需要背记的内容索引（可选）</string>
+    <string name="summary_problem_solving">重要解题方式总结索引（可选）</string>
+    <string name="summary_mistakes">重要错题索引（可选）</string>
+    
+    <!-- 超链接 -->
+    <string name="hyperlink_internal">应用内链接</string>
+    <string name="hyperlink_number">编号标签</string>
+    <string name="hyperlink_external">互联网链接</string>
+    <string name="hyperlink_copied">链接已复制</string>
+    
+    <!-- 文件操作 -->
+    <string name="file_new">新建</string>
+    <string name="file_open">打开</string>
+    <string name="file_save">保存</string>
+    <string name="file_delete">删除</string>
+    <string name="file_rename">重命名</string>
+    <string name="folder_new">新建文件夹</string>
+    <string name="folder_draft">草稿纸</string>
+    <string name="folder_merged">合并页</string>
+    
+    <!-- 设置 -->
+    <string name="settings_ai_api">AI API配置</string>
+    <string name="settings_saved">设置已保存</string>
+    <string name="settings_export">导出备份</string>
+    <string name="settings_import">导入备份</string>
+    <string name="settings_about">关于</string>
+    
+    <!-- 通用 -->
+    <string name="ok">确定</string>
+    <string name="cancel">取消</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="back">返回</string>
+    <string name="confirm">确认</string>
+    
+    <!-- 提示信息 -->
+    <string name="toast_saved">已保存</string>
+    <string name="toast_deleted">已删除</string>
+    <string name="toast_copied">已复制</string>
+    <string name="toast_error">操作失败</string>
+</resources>

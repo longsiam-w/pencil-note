@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="@dimen/spacing_normal">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/settings"
+        android:textSize="@dimen/text_size_title"
+        android:textStyle="bold"
+        android:paddingBottom="@dimen/spacing_normal" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_ai_api"
+        android:textSize="@dimen/text_size_normal"
+        android:paddingTop="@dimen/spacing_small" />
+
+    <EditText
+        android:id="@+id/et_api_url"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="AI API URL"
+        android:inputType="textUri" />
+
+    <EditText
+        android:id="@+id/et_api_model"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="AI 模型名称"
+        android:inputType="text" />
+
+    <EditText
+        android:id="@+id/et_api_key"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="API Key"
+        android:inputType="textPassword" />
+
+    <EditText
+        android:id="@+id/et_ai_timeout_seconds"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="AI 请求超时时间（秒，默认 120）"
+        android:inputType="number" />
+
+    <EditText
+        android:id="@+id/et_ai_default_prompt"
+        android:layout_width="match_parent"
+        android:layout_height="144dp"
+        android:hint="AI 框选提问默认提示词"
+        android:maxLines="6"
+        android:scrollbars="vertical"
+        android:gravity="top"
+        android:inputType="textMultiLine" />
+
+    <CheckBox
+        android:id="@+id/cb_pdf_two_page"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="PDF 使用双页显示" />
+
+    <CheckBox
+        android:id="@+id/cb_highlighter_snap"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="荧光笔自动校正为水平/垂直直线" />
+
+    <CheckBox
+        android:id="@+id/cb_selection_cut_strokes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="框选时切割笔迹" />
+
+    <CheckBox
+        android:id="@+id/cb_fold_keep_highlighter_images"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="框选折叠不折叠荧光笔笔迹与图片" />
+
+    <Button
+        android:id="@+id/btn_draft_shortcut_target"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="选择草稿纸快捷按钮目标"
+        android:layout_marginTop="@dimen/spacing_small" />
+
+    <Button android:id="@+id/btn_manage_chapter_templates" style="@style/PencilActionButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="章节结构模板" />
+    <Button
+        android:id="@+id/btn_manage_user_presets"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="管理 USER 提示词预设"
+        android:layout_marginTop="@dimen/spacing_small" />
+
+    <Button
+        android:id="@+id/btn_save_api"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/save"
+        android:layout_marginTop="@dimen/spacing_small" />
+
+    <Button
+        android:id="@+id/btn_test_ai_connection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="测试 AI API 连接"
+        android:layout_marginTop="@dimen/spacing_small" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/text_light_gray"
+        android:layout_marginVertical="@dimen/spacing_normal" />
+
+    <Button
+        android:id="@+id/btn_export"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_export" />
+
+
+
+    <Button android:id="@+id/btn_rollback_restore" style="@style/PencilActionButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="回退到上次恢复前资料库" />
+    <Button
+        android:id="@+id/btn_import"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_import"
+        android:layout_marginTop="@dimen/spacing_small" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="PENCIL Beta   longsiam@outlook.com"
+        android:textColor="@color/text_gray"
+        android:textSize="13sp"
+        android:paddingTop="24dp"
+        android:paddingBottom="12dp" />
+</LinearLayout>
+</ScrollView>

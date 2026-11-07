@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 主题色 -->
+    <color name="primary">#276C72</color>
+    <color name="primary_dark">#183F47</color>
+    <color name="accent">#3E8C8C</color>
+    
+    <!-- 背景色 -->
+    <color name="canvas_white">#FFFFFF</color>
+    <color name="paper_beige">#FFF4D6</color>
+    <color name="canvas_background">@color/paper_beige</color>
+    <color name="sidebar_bg">#F7F9F8</color>
+    <color name="toolbar_bg">#FFFFFF</color>
+    <color name="surface_bright">#FFFFFF</color>
+    <color name="action_surface">#FFFFFF</color>
+    <color name="action_pressed">#E2EFEE</color>
+    <color name="action_selected">#D9EBE9</color>
+    <color name="border_subtle">#D7E1E0</color>
+    <color name="ink_primary">#172225</color>
+    <color name="accent_soft">#D9EBE9</color>
+    <color name="accent_ink">#276C72</color>
+    
+    <!-- 钢笔颜色 -->
+    <color name="pen_black">#000000</color>
+    <color name="pen_red">#FF0000</color>
+    <color name="pen_blue">#0000FF</color>
+    
+    <!-- 铅笔颜色 -->
+    <color name="pencil_gray">#4A4A4A</color>
+    
+    <!-- 荧光笔颜色（半透明） -->
+    <color name="highlighter_yellow">#80FFFF00</color>
+    <color name="highlighter_green">#8000FF00</color>
+    <color name="highlighter_red">#80FF0000</color>
+    
+    <!-- 文本颜色 -->
+    <color name="text_black">#172225</color>
+    <color name="text_gray">#5F7072</color>
+    <color name="text_light_gray">#8B999A</color>
+    
+    <!-- UI元素颜色 -->
+    <color name="hyperlink_tag">#8000BCD4</color>
+    <color name="bookmark_indicator">#FFC107</color>
+    <color name="summary_collapsed">#E0E0E0</color>
+    
+    <!-- 通用颜色 -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
+    <color name="semi_transparent">#80000000</color>
+</resources>

@@ -1,0 +1,95 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'none'"><link rel="stylesheet" href="vendor/package/dist/katex.min.css"><style>body{margin:0;padding:12px;color:#172225;background:#f7f9f8;font:15px/1.65 sans-serif;overflow-wrap:anywhere;overflow-x:hidden}article{padding:8px 0 20px;min-width:0;white-space:normal}article p{margin:0 0 12px;white-space:normal}article li{margin:3px 0}article hr{border:0;border-top:1px solid #c8d8d6;margin:14px 0}.user-bubble{align-self:flex-end;margin:10px 0 8px auto;max-width:88%;padding:8px 12px;color:#fff;background:#438bd0;border-radius:14px 14px 3px 14px;white-space:pre-wrap}.divider{text-align:center;color:#5f7072;border-top:1px solid #b9c9c8;padding-top:10px;margin:14px 0}article+article{border-top:1px solid #c8d8d6;padding-top:20px}pre{overflow:auto;background:#eaf0ef;padding:12px;white-space:pre;max-width:100%;box-sizing:border-box}code{overflow-wrap:anywhere}table{border-collapse:collapse;display:block;overflow-x:auto;max-width:100%;white-space:nowrap}td,th{border:1px solid #ccd8d6;padding:6px}blockquote{border-left:3px solid #276c72;margin:12px 0;padding-left:12px;color:#5f7072}h1,h2,h3{line-height:1.3}strong,b{font-weight:700;color:inherit}a{color:#276c72}.math-fallback{display:block;white-space:pre-wrap;overflow-wrap:anywhere;background:#edf1f0;padding:8px;border-radius:4px}html{box-sizing:border-box;width:100%;max-width:100%;overflow-x:hidden}body{width:100%;max-width:100%;overflow-x:hidden}main,article{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:hidden}main{contain:inline-size paint}body{position:relative}body,main,article{min-width:0;box-sizing:border-box}article p,article li,article blockquote{min-width:0;max-width:100%;box-sizing:border-box}.math-scroll,.katex-inline-scroll,pre,table{overscroll-behavior-x:contain}.math-scroll{display:block;max-width:100%;overflow-x:auto;overflow-y:hidden;padding:8px 0 12px;box-sizing:border-box;-webkit-overflow-scrolling:touch}.katex-inline-scroll{display:inline-block;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:middle;padding:5px 0 8px;box-sizing:border-box}.math-content{display:inline-block;min-width:0;white-space:nowrap;overflow-wrap:normal}.math-content .katex-display{margin:0;text-align:left}.math-content .katex{white-space:nowrap;overflow-wrap:normal}.thinking{background:#e9e9e9;color:#60666a;border:1px solid #d5d5d5;border-radius:8px;margin:8px 0 14px;padding:9px 12px}.thinking summary{cursor:pointer;font-size:13px}.thought-text{white-space:pre-wrap;font-size:13px;margin-top:8px;max-height:280px;overflow:auto}.answer-actions{display:flex;justify-content:flex-end;margin-top:10px}.regenerate{width:44px;height:44px;font-size:24px;border:0;border-radius:8px;background:transparent;color:#647477}.regenerate:disabled{opacity:.35}.status{font-size:12px;color:#7c8588;margin-top:8px}@media print{.thinking,.answer-actions,.status{display:none!important}}</style></head><body><main id="content"></main><script src="vendor/markdown-it.min.js"></script><script src="vendor/package/dist/katex.min.js"></script><script>
+const md=markdownit({html:false,breaks:true,linkify:false});function normalizeMathSource(value){
+ return String(value??'').trim().replace(/[\u200B\u200C\u200D\uFEFF]/g,'').replace(/\u00a0/g,' ');
+}
+function escapedAt(src,pos){let count=0;while(pos>0&&src[--pos]==='\\')count++;return count%2===1;}
+function mathRule(state,silent){
+ const start=state.pos,src=state.src;let open,close,display=false;
+ for(const pair of [['$$','$$',true],['\\[','\\]',true],['\\(','\\)',false],['$','$',false]]){
+  if(src.startsWith(pair[0],start)&&!escapedAt(src,start)){[open,close,display]=pair;break;}
+ }
+ if(!open)return false;
+ if(open==='$'&&(/\s/.test(src[start+1]||'')||src[start+1]==='$'))return false;
+ let end=src.indexOf(close,start+open.length);
+ while(end>=0&&(escapedAt(src,end)||(open==='$'&&(src[end+1]==='$'||/\s/.test(src[end-1])))))end=src.indexOf(close,end+close.length);
+ if(end<0||(!display&&src.slice(start,end).includes('\n')))return false;
+ if(!silent){const token=state.push('math','',0);token.content=normalizeMathSource(src.slice(start+open.length,end));token.meta={display};}
+ state.pos=end+close.length;return true;
+}
+// Block parsing keeps blank lines, alignment separators and matrix rows out of Markdown parsing.
+function mathBlock(state,startLine,endLine,silent){
+ const start=state.bMarks[startLine]+state.tShift[startLine];
+ const first=state.src.slice(start,state.eMarks[startLine]);
+ const open=first.startsWith('$$')?'$$':first.startsWith('\\[')?'\\[':null;
+ if(!open)return false;
+ const close=open==='$$'?'$$':'\\]';
+ let line=startLine,position=-1;
+ for(;line<endLine;line++){
+  const from=line===startLine?start+open.length:state.bMarks[line];
+  let candidate=state.src.indexOf(close,from);
+  while(candidate>=0&&candidate<state.eMarks[line]&&escapedAt(state.src,candidate))candidate=state.src.indexOf(close,candidate+close.length);
+  if(candidate>=0&&candidate<state.eMarks[line]){position=candidate;break;}
+ }
+ if(position<0||state.src.slice(position+close.length,state.eMarks[line]).trim())return false;
+ if(silent)return true;
+ const token=state.push('math_block','',0);token.block=true;token.content=normalizeMathSource(state.src.slice(start+open.length,position));token.meta={display:true};token.map=[startLine,line+1];state.line=line+1;return true;
+}
+function renderMath(tokens,index){
+ const source=tokens[index].content,display=tokens[index].meta.display;
+ const options={displayMode:display,throwOnError:true,trust:false,strict:'ignore',maxExpand:500,maxSize:30};
+ let html;
+ try{html=katex.renderToString(source,options);}
+ catch(first){
+  // A bounded retry for unsupported equation wrappers; never rewrite matrix row separators.
+  const repaired=source.replace(/\\begin\{(?:equation\*?|displaymath)\}/g,'').replace(/\\end\{(?:equation\*?|displaymath)\}/g,'').replace(/\\(?:label|nonumber)\{[^{}]*\}/g,'').replace(/\\nonumber\b/g,'');
+  try{if(repaired===source)throw first;html=katex.renderToString(repaired,options);}
+  catch(second){return '<code class="math-fallback">'+md.utils.escapeHtml(source)+'</code>';}
+ }
+ return '<span class="'+(display?'math-scroll':'katex-inline-scroll')+'"><span class="math-content">'+html+'</span></span>';
+}
+
+// Accept AI bold around punctuation or padding spaces; code and escaped stars retain their meaning.
+function aiStrongRule(state,silent){
+ const start=state.pos,src=state.src;
+ if(!src.startsWith('**',start)||src[start+2]==='*')return false;
+ let end=src.indexOf('**',start+2);
+ while(end>=0&&src[end-1]==='\\')end=src.indexOf('**',end+2);
+ if(end<0||src[end+2]==='*')return false;
+ const inner=src.slice(start+2,end).trim();
+ if(!inner||inner.includes('\n'))return false;
+ if(!silent){state.push('strong_open','strong',1);state.md.inline.parse(inner,state.md,state.env,state.tokens);state.push('strong_close','strong',-1);}
+ state.pos=end+2;return true;
+}
+md.inline.ruler.before('emphasis','ai_strong',aiStrongRule);
+md.inline.ruler.before('escape','math',mathRule);
+md.block.ruler.before('fence','math_block',mathBlock,{alt:['paragraph','reference','blockquote','list']});
+md.renderer.rules.math=renderMath;md.renderer.rules.math_block=renderMath;
+function normalizeAnswer(raw){let value=String(raw??'').replace(/\\r\\n/g,'\\n').replace(/\\r/g,'\\n');return value.replace(/\\u00a0/g,' ')}
+window.showAnswers=function(answers){window.showConversation(answers.map(answer=>answer==='__PENCIL_NEW_CONVERSATION__'?{type:'divider'}:{type:'turn',user:'（用户提问）',answer:answer}))};
+const articles=new Map();
+function paintTurn(a,turn){
+ const follow=document.documentElement.scrollHeight-window.innerHeight-window.scrollY<100;
+ let thought=a.querySelector('.thinking');
+ if(turn.reasoning){
+  if(!thought){thought=document.createElement('details');thought.className='thinking';thought.innerHTML='<summary></summary><div class="thought-text"></div>';a.prepend(thought)}
+  const done=!!turn.reasoningDone||!turn.streaming;
+  if(thought.dataset.done!==String(done)){thought.open=!done;thought.dataset.done=String(done)}
+  thought.querySelector('summary').textContent=done?'思考过程 · 点击展开 / 折叠':'思考中…';
+  const text=thought.querySelector('.thought-text');text.textContent=turn.reasoning;if(!done)text.scrollTop=text.scrollHeight;
+ }else if(thought)thought.remove();
+ let body=a.querySelector('.answer-body');if(!body){body=document.createElement('div');body.className='answer-body';a.appendChild(body)}
+ const answer=normalizeAnswer(turn.answer||'');
+ try{body.innerHTML=md.render(answer)}catch(e){body.textContent=answer;body.style.whiteSpace='pre-wrap'}
+ let status=a.querySelector('.status');if(!status){status=document.createElement('div');status.className='status';a.appendChild(status)}
+ status.textContent=turn.status||(turn.streaming?(answer?'正在输出…':turn.reasoning?'':'等待模型响应…'):'');
+ let actions=a.querySelector('.answer-actions');
+ if(turn.id){
+  if(!actions){actions=document.createElement('div');actions.className='answer-actions';const button=document.createElement('button');button.className='regenerate';button.textContent='↻';button.title='重新生成回复';button.setAttribute('aria-label','重新生成回复');button.onclick=()=>{if(window.PencilAi)window.PencilAi.regenerate(a.dataset.id)};actions.appendChild(button);a.appendChild(actions)}
+  actions.firstChild.disabled=!!turn.streaming;
+ }else if(actions)actions.remove();
+ if(follow)window.scrollToLatest();
+}
+window.updateTurn=function(turn){const a=articles.get(turn.id);if(a)paintTurn(a,turn)};
+window.showConversation=function(turns){const root=document.getElementById('content');root.replaceChildren();articles.clear();turns.forEach(turn=>{if(turn.type==='divider'){const d=document.createElement('div');d.className='divider';d.textContent='──── 新对话 ────';root.appendChild(d);return}const user=document.createElement('div');user.className='user-bubble';user.textContent=normalizeAnswer(turn.user||'（用户提问）');root.appendChild(user);const a=document.createElement('article');a.dataset.id=turn.id||'';root.appendChild(a);if(turn.id)articles.set(turn.id,a);paintTurn(a,turn)});const busy=turns.some(t=>t.streaming);root.querySelectorAll('.regenerate').forEach(b=>b.disabled=busy);window.scrollToLatest()};
+window.scrollToLatest=function(){window.scrollTo(0,document.body.scrollHeight);const root=document.getElementById('content');if(root)root.scrollTop=root.scrollHeight};window.getSelectedText=function(){return String(window.getSelection?window.getSelection().toString():'')};
+</script></body></html>

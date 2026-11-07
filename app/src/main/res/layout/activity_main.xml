@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/canvas_background"
+        android:clipToPadding="false">
+
+        <FrameLayout
+            android:id="@+id/canvas_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@id/bottom_toolbar">
+            <ImageView android:id="@+id/page_background" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:visibility="gone" />
+            <com.vibetools.pencil.canvas.NoteOverlayView android:id="@+id/note_overlay" android:layout_width="match_parent" android:layout_height="match_parent" />
+        </FrameLayout>
+
+        <TextView android:id="@+id/current_note_title" android:layout_width="wrap_content" android:layout_toEndOf="@id/btn_link_back" android:maxEms="16" android:maxLines="1" android:ellipsize="end" android:layout_height="48dp" android:layout_alignParentTop="true" android:layout_alignParentStart="true" android:layout_margin="8dp" android:gravity="center_vertical" android:paddingHorizontal="14dp" android:textColor="@color/ink_primary" android:textStyle="bold" android:textSize="15sp" android:background="@drawable/toolbar_background" />
+        <ImageButton android:id="@+id/btn_link_back" style="@style/PencilToolbarButton" android:layout_alignParentTop="true" android:layout_alignParentStart="true" android:layout_margin="@dimen/spacing_small" android:src="@drawable/back_arrow" android:contentDescription="@string/back" android:visibility="gone" android:background="@drawable/toolbar_background" />
+        <LinearLayout android:id="@+id/quick_access_panel" android:layout_width="220dp" android:layout_height="wrap_content" android:layout_alignParentStart="true" android:layout_above="@id/bottom_toolbar" android:layout_margin="12dp" android:orientation="vertical" android:padding="6dp" android:elevation="6dp" android:background="@drawable/toolbar_background" />
+        <Button style="@style/PencilActionButton" android:id="@+id/btn_wrong_book_back" android:layout_width="wrap_content" android:layout_height="52dp" android:layout_alignParentBottom="true" android:layout_alignParentEnd="true" android:layout_margin="16dp" android:text="返回" android:visibility="gone" android:background="@drawable/toolbar_background" />
+        <TextView android:id="@+id/pdf_page_indicator" android:layout_width="wrap_content" android:layout_height="48dp" android:layout_alignParentTop="true" android:layout_toEndOf="@id/current_note_title" android:layout_marginStart="8dp" android:layout_marginTop="8dp" android:gravity="center" android:paddingHorizontal="16dp" android:text="1 / 1" android:clickable="true" android:focusable="true" android:background="@drawable/toolbar_background" android:visibility="gone" />
+        <com.vibetools.pencil.ui.PageTurnButton android:id="@+id/pdf_previous" android:layout_width="76dp" android:layout_height="96dp" android:layout_alignParentStart="true" android:layout_centerVertical="true" android:layout_marginStart="12dp" android:src="@drawable/page_previous" android:scaleType="center" android:padding="0dp" android:contentDescription="上一页" android:background="@drawable/toolbar_background" android:visibility="gone" />
+        <com.vibetools.pencil.ui.PageTurnButton android:id="@+id/pdf_next" android:layout_width="76dp" android:layout_height="96dp" android:layout_alignParentEnd="true" android:layout_centerVertical="true" android:layout_marginEnd="12dp" android:src="@drawable/page_next" android:scaleType="center" android:padding="0dp" android:contentDescription="下一页" android:background="@drawable/toolbar_background" android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/top_right_toolbar"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/toolbar_height"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:layout_margin="@dimen/spacing_small"
+            android:background="@drawable/toolbar_background"
+            android:elevation="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="6dp">
+
+            <ImageButton android:id="@+id/btn_sidebar" style="@style/PencilToolbarButton" android:src="@drawable/sidebar_swipe" android:contentDescription="@string/open_sidebar" />
+            <ImageButton android:id="@+id/btn_undo" style="@style/PencilToolbarButton" android:src="@drawable/undo" android:contentDescription="@string/undo" android:enabled="false" android:alpha="0.35" />
+            <ImageButton android:id="@+id/btn_redo" style="@style/PencilToolbarButton" android:src="@drawable/redo" android:contentDescription="@string/redo" android:enabled="false" android:alpha="0.35" />
+            <ImageButton android:id="@+id/btn_settings" style="@style/PencilToolbarButton" android:src="@drawable/icon_settings_new" android:contentDescription="@string/settings" />
+            <ImageButton android:id="@+id/btn_hide_ui" style="@style/PencilToolbarButton" android:src="@drawable/ic_hide_ui" android:contentDescription="隐藏界面控件" />
+            <ImageButton android:id="@+id/btn_print" style="@style/PencilToolbarButton" android:src="@drawable/ic_export" android:contentDescription="导出笔记或 PDF" />
+            <ImageButton android:id="@+id/btn_clipboard" style="@style/PencilToolbarButton" android:src="@drawable/scissors" android:contentDescription="@string/clipboard" />
+            <ImageButton android:id="@+id/btn_merge_pages" style="@style/PencilToolbarButton" android:src="@drawable/book_open" android:contentDescription="@string/merge_pages" />
+            <ImageButton android:id="@+id/btn_draft_shortcut" style="@style/PencilToolbarButton" android:src="@drawable/draft_paper" android:contentDescription="进入草稿纸" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tool_popup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@id/bottom_toolbar"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="@dimen/spacing_small"
+            android:background="@drawable/toolbar_background"
+            android:elevation="6dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="@dimen/spacing_small"
+            android:visibility="gone">
+
+            <ImageButton android:id="@+id/btn_tool_pen" style="@style/PencilToolbarButton" android:src="@drawable/pen" android:contentDescription="@string/tool_pen" />
+            <ImageButton android:id="@+id/btn_tool_pencil" style="@style/PencilToolbarButton" android:src="@drawable/pencil" android:contentDescription="@string/tool_pencil" />
+            <ImageButton android:id="@+id/btn_tool_highlighter" style="@style/PencilToolbarButton" android:src="@drawable/highlighter" android:contentDescription="@string/tool_highlighter" />
+            <ImageButton android:id="@+id/btn_color_1" style="@style/PencilToolbarButton" android:background="@drawable/color_swatch" android:contentDescription="预设颜色一" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_color_2" style="@style/PencilToolbarButton" android:background="@drawable/color_swatch" android:contentDescription="预设颜色二" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_color_3" style="@style/PencilToolbarButton" android:background="@drawable/color_swatch" android:contentDescription="预设颜色三" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_color_4" style="@style/PencilToolbarButton" android:background="@drawable/color_swatch" android:contentDescription="灰色 #999999" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_color_custom" style="@style/PencilToolbarButton" android:src="@drawable/color_palette" android:contentDescription="自定义颜色" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_tool_text" style="@style/PencilToolbarButton" android:src="@drawable/text_t" android:contentDescription="@string/tool_text" />
+            <ImageButton android:id="@+id/btn_select_rect" style="@style/PencilToolbarButton" android:src="@drawable/select_mode" android:contentDescription="矩形框选" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_select_freeform" style="@style/PencilToolbarButton" android:src="@drawable/icon_freeform_new" android:contentDescription="自由形框选" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_insert_image" style="@style/PencilToolbarButton" android:src="@drawable/insert_image" android:contentDescription="插入图片" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_insert_bookmark" style="@style/PencilToolbarButton" android:src="@drawable/insert_bookmark" android:contentDescription="插入书签" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_insert_link" style="@style/PencilToolbarButton" android:src="@drawable/insert_link" android:contentDescription="插入超链接" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_insert_emphasis" style="@style/PencilToolbarButton" android:src="@drawable/insert_emphasis" android:contentDescription="插入强调" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_insert_teleport" style="@style/PencilToolbarButton" android:src="@drawable/insert_link" android:contentDescription="插入传送点" android:visibility="gone" />
+            <ImageButton android:id="@+id/btn_tool_sand_eraser" style="@style/PencilToolbarButton" android:src="@drawable/sand_eraser" android:contentDescription="@string/tool_sand_eraser" />
+            <ImageButton android:id="@+id/btn_tool_eraser" style="@style/PencilToolbarButton" android:src="@drawable/eraser" android:contentDescription="@string/tool_eraser" />
+            <ImageButton android:id="@+id/btn_tool_correction_fluid" style="@style/PencilToolbarButton" android:src="@drawable/correction_fluid" android:contentDescription="@string/tool_correction_fluid" />
+            <SeekBar android:id="@+id/size_slider" android:layout_width="150dp" android:layout_height="wrap_content" android:max="395" android:progress="25" android:visibility="gone" />
+            <TextView android:id="@+id/size_value" android:layout_width="42dp" android:layout_height="wrap_content" android:gravity="center" android:text="3" android:textColor="@color/text_black" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/bottom_toolbar"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/toolbar_height"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:background="@drawable/toolbar_background"
+            android:elevation="6dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="@dimen/toolbar_padding">
+
+            <ImageButton android:id="@+id/btn_mode_drag" style="@style/PencilToolbarButton" android:src="@drawable/icon_drag_new" android:contentDescription="@string/mode_drag" />
+            <ImageButton android:id="@+id/btn_mode_write" style="@style/PencilToolbarButton" android:src="@drawable/pen" android:contentDescription="@string/mode_write" />
+            <ImageButton android:id="@+id/btn_mode_insert" style="@style/PencilToolbarButton" android:src="@drawable/link" android:contentDescription="@string/mode_insert" />
+            <ImageButton android:id="@+id/btn_mode_select" style="@style/PencilToolbarButton" android:src="@drawable/select_mode" android:contentDescription="@string/mode_select" />
+            <ImageButton android:id="@+id/btn_mode_erase" style="@style/PencilToolbarButton" android:src="@drawable/eraser" android:contentDescription="@string/mode_erase" />
+        </LinearLayout>
+        <Button android:id="@+id/btn_restore_ui" style="@style/PencilActionButton" android:layout_width="wrap_content" android:layout_height="48dp" android:layout_alignParentBottom="true" android:layout_alignParentEnd="true" android:layout_margin="16dp" android:text="恢复" android:contentDescription="恢复界面控件" android:elevation="12dp" android:visibility="gone" android:background="@drawable/toolbar_background" />
+    </RelativeLayout>
+
+    <com.vibetools.pencil.ui.SidebarSwipeLayout
+        android:id="@+id/navigation_drawer"
+        android:layout_width="@dimen/sidebar_width"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="@color/sidebar_bg"
+        android:elevation="12dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:orientation="horizontal"
+            android:padding="6dp">
+            <TextView android:id="@+id/drawer_directory_tab" style="@style/PencilDrawerTab" android:text="@string/tab_directory" />
+            <TextView android:id="@+id/drawer_ai_tab" style="@style/PencilDrawerTab" android:text="@string/tab_ai" />
+        </LinearLayout>
+
+        <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
+            <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+                <LinearLayout android:id="@+id/directory_content" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="@dimen/sidebar_padding">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                        <TextView style="@style/PencilSectionTitle" android:layout_width="0dp" android:layout_weight="1" android:text="@string/directory_root" />
+                        <TextView android:id="@+id/directory_day" style="@style/PencilSectionTitle" android:layout_width="wrap_content" android:gravity="end" android:singleLine="true" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <Button style="@style/PencilActionButton" android:id="@+id/new_note_action" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="新建笔记" />
+                        <Button style="@style/PencilActionButton" android:id="@+id/new_folder_action" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="新建文件夹" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <Button style="@style/PencilActionButton" android:id="@+id/open_pdf_action" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="导入PDF" />
+                        <Button style="@style/PencilActionButton" android:id="@+id/open_image_action" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="导入图片" />
+                    </LinearLayout>
+                    <EditText style="@style/PencilField" android:id="@+id/directory_search" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="搜索文件、书签、总结" android:singleLine="true" android:padding="10dp" />
+                    <LinearLayout android:id="@+id/tree_container" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/ai_content" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="@dimen/sidebar_padding" android:visibility="gone">
+                    <TextView style="@style/PencilSectionTitle" android:text="@string/ai_placeholder_title" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <Button style="@style/PencilActionButton" android:id="@+id/ai_select_button" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="框选提问" />
+                        <Button style="@style/PencilActionButton" android:id="@+id/ai_recognize_button" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="识别笔迹" />
+                    </LinearLayout>
+                    <TextView style="@style/PencilSectionTitle" android:text="SYSTEM · 系统预设提示词" />
+                    <EditText style="@style/PencilField" android:id="@+id/ai_prompt" android:layout_width="match_parent" android:layout_height="144dp" android:hint="系统预设提示词" android:inputType="textMultiLine" android:scrollbars="vertical" android:gravity="top" />
+                    <TextView style="@style/PencilSectionTitle" android:text="USER · 补充问题（可为空）" />
+                    <Button android:id="@+id/ai_choose_user_preset" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="选择 USER 提示词预设" />
+                    <EditText style="@style/PencilField" android:id="@+id/ai_user_prompt" android:layout_width="match_parent" android:layout_height="96dp" android:hint="可补充要求或问题，也可留空" android:inputType="textMultiLine" android:scrollbars="vertical" android:gravity="top" />
+                    <LinearLayout android:id="@+id/ai_attachment_chip" android:layout_width="wrap_content" android:layout_height="32dp" android:layout_marginTop="6dp" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="10dp" android:paddingEnd="4dp" android:background="@drawable/action_button_background" android:visibility="gone">
+                        <TextView android:id="@+id/ai_attachment_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="含截图附件" android:textColor="@color/primary" android:textSize="12sp" />
+                        <TextView android:id="@+id/ai_attachment_remove" android:layout_width="28dp" android:layout_height="28dp" android:gravity="center" android:text="×" android:textStyle="bold" android:textSize="20sp" android:textColor="@color/primary" android:contentDescription="移除截图附件" android:clickable="true" android:focusable="true" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/ai_include_background" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="包含背景（PDF/图片内容）" android:checked="true" />
+                    <CheckBox android:id="@+id/ai_note_context" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="添加笔记上下文" android:visibility="gone" />
+                    <LinearLayout android:id="@+id/ai_pdf_context" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:visibility="gone">
+                        <CheckBox android:id="@+id/ai_pdf_context_enabled" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="读取 PDF 上下文" />
+                        <EditText style="@style/PencilField" android:id="@+id/ai_pdf_context_start" android:layout_width="0dp" android:layout_height="42dp" android:layout_weight="1" android:hint="起始页" android:inputType="number" android:singleLine="true" android:padding="8dp" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" - " android:textColor="@color/text_gray" />
+                        <EditText style="@style/PencilField" android:id="@+id/ai_pdf_context_end" android:layout_width="0dp" android:layout_height="42dp" android:layout_weight="1" android:hint="结束页" android:inputType="number" android:singleLine="true" android:padding="8dp" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <Button style="@style/PencilActionButton" android:id="@+id/ai_new_conversation_button" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="开启新对话" />
+                        <Button style="@style/PencilActionButton" android:id="@+id/ai_send_button" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/ai_send" />
+                    </LinearLayout>
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="AI答疑 · 区域内可滚动" android:layout_marginTop="16dp" android:textStyle="bold" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="提示：长按 AI 回答区域，可选择部分内容并复制到笔记" android:textColor="@color/text_gray" android:paddingTop="6dp" android:paddingBottom="6dp" />
+                    <com.vibetools.pencil.ui.AiAnswerView android:id="@+id/ai_history" android:layout_width="match_parent" android:layout_height="480dp" android:layout_marginTop="12dp" />
+                    <EditText style="@style/PencilField" android:id="@+id/ai_recognized_text" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="识别结果可在此修改" android:minLines="3" android:visibility="gone" />
+                    <Button style="@style/PencilActionButton" android:id="@+id/ai_apply_text" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="将修改后的文本填入画布" android:visibility="gone" />
+                </LinearLayout>
+            </FrameLayout>
+        </ScrollView>
+    </com.vibetools.pencil.ui.SidebarSwipeLayout>
+</androidx.drawerlayout.widget.DrawerLayout>

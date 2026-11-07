@@ -1,0 +1,53 @@
+<resources>
+    <style name="PencilToolbarButton">
+        <item name="android:layout_width">42dp</item>
+        <item name="android:layout_height">42dp</item>
+        <item name="android:layout_margin">2dp</item>
+        <item name="android:padding">9dp</item>
+        <item name="android:scaleType">centerInside</item>
+        <item name="android:background">@drawable/tool_button_background</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+    <style name="PencilDrawerTab">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">42dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_gray</item>
+        <item name="android:background">@drawable/drawer_tab_background</item>
+    </style>
+    <style name="PencilSectionTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:layout_marginBottom">10dp</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/ink_primary</item>
+    </style>
+    <style name="PencilTreeItem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/ink_primary</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">8dp</item>
+    </style>
+    <style name="PencilActionButton" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:minHeight">42dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/ink_primary</item>
+        <item name="android:background">@drawable/action_button_background</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+    <style name="PencilField" parent="@android:style/Widget.EditText">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/ink_primary</item>
+        <item name="android:textColorHint">@color/text_light_gray</item>
+        <item name="android:background">@drawable/field_background</item>
+        <item name="android:padding">12dp</item>
+    </style>
+</resources>

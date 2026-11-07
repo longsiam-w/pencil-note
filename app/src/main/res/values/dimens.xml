@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 尺寸定义 -->
+    
+    <!-- 工具栏 -->
+    <dimen name="toolbar_height">56dp</dimen>
+    <dimen name="toolbar_icon_size">32dp</dimen>
+    <dimen name="toolbar_padding">8dp</dimen>
+    
+    <!-- 侧边栏 -->
+    <dimen name="sidebar_width">348dp</dimen>
+    <dimen name="sidebar_padding">18dp</dimen>
+    
+    <!-- 笔触宽度 -->
+    <dimen name="pen_width">2dp</dimen>
+    <dimen name="pencil_width">1dp</dimen>
+    <dimen name="highlighter_width">8dp</dimen>
+    
+    <!-- 橡皮擦宽度 -->
+    <dimen name="eraser_width">16dp</dimen>
+    <dimen name="sand_eraser_width">12dp</dimen>
+    <dimen name="correction_fluid_width">20dp</dimen>
+    
+    <!-- 文本 -->
+    <dimen name="text_size_small">12sp</dimen>
+    <dimen name="text_size_normal">14sp</dimen>
+    <dimen name="text_size_large">16sp</dimen>
+    <dimen name="text_size_title">18sp</dimen>
+    <dimen name="text_default_size">16sp</dimen>
+    
+    <!-- 间距 -->
+    <dimen name="spacing_tiny">4dp</dimen>
+    <dimen name="spacing_small">8dp</dimen>
+    <dimen name="spacing_normal">16dp</dimen>
+    <dimen name="spacing_large">24dp</dimen>
+    
+    <!-- 圆角 -->
+    <dimen name="corner_radius_small">4dp</dimen>
+    <dimen name="corner_radius_normal">8dp</dimen>
+    <dimen name="corner_radius_large">16dp</dimen>
+    
+    <!-- 图标 -->
+    <dimen name="icon_size_small">24dp</dimen>
+    <dimen name="icon_size_normal">32dp</dimen>
+    <dimen name="icon_size_large">48dp</dimen>
+    
+    <!-- 超链接tag -->
+    <dimen name="hyperlink_tag_size">24dp</dimen>
+    
+    <!-- 总结方块 -->
+    <dimen name="summary_collapsed_size">32dp</dimen>
+</resources>
