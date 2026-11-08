@@ -54,7 +54,7 @@
             <ImageButton android:id="@+id/btn_print" style="@style/PencilToolbarButton" android:src="@drawable/ic_export" android:contentDescription="导出笔记或 PDF" />
             <ImageButton android:id="@+id/btn_clipboard" style="@style/PencilToolbarButton" android:src="@drawable/scissors" android:contentDescription="@string/clipboard" />
             <ImageButton android:id="@+id/btn_merge_pages" style="@style/PencilToolbarButton" android:src="@drawable/ic_merge_pages" android:contentDescription="@string/merge_pages" />
-            <ImageButton android:id="@+id/btn_split" style="@style/PencilToolbarButton" android:src="@drawable/ic_split" android:contentDescription="进入分屏模式" />
+            <ImageButton android:id="@+id/btn_split" style="@style/PencilToolbarButton" android:src="@drawable/ic_split" android:tint="@color/split_icon_tint" android:contentDescription="进入分屏模式" />
             <ImageButton android:id="@+id/btn_draft_shortcut" style="@style/PencilToolbarButton" android:src="@drawable/draft_paper" android:contentDescription="进入草稿纸" />
         </LinearLayout>
 

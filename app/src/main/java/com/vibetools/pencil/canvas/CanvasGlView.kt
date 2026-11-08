@@ -107,6 +107,15 @@ class CanvasGlView(context: Context) : GLSurfaceView(context) {
     fun setSelectionStyle(value: SelectionStyle) { selectionStyle = value; clearSelection(); mode=Mode.SELECT }
     fun currentSelectionStyle()=selectionStyle
     fun isMovingSelection()=movingSelection
+    fun moveMovingSelectionBy(dx:Float,dy:Float) {
+        if(!movingSelection)return
+        renderer.moveLocked(dx,dy);selectionMoveListener?.invoke(dx,dy)
+        selection=selection?.let{SelectionRegion.Rectangle(it.left+dx,it.top+dy,it.right+dx,it.bottom+dy)}
+        selectionPolygon=selectionPolygon.map{PointF(it.x+dx,it.y+dy)};renderer.setSelection(selectionPolygon);notifySelectionChanged();notifyContentChanged();requestRender()
+    }
+    fun requestMoveConfirmation(){textRequestedListener?.invoke(0f,-1f)}
+    fun movingClip(): CanvasClip? = if(movingSelection)renderer.lockedClip() else null
+    fun replaceTransferredContent(strokes:List<Stroke>,texts:List<TextBox>) { clearSelection();setDocument(strokes,texts);contentChangedListener?.invoke(strokes,texts) }
     fun setWriteTool(tool: Tool) { correctionActive=false;writeTool=tool;mode=Mode.WRITE;strokeWidth=brushPrefs.getFloat("${tool.name}:width",when(tool){Tool.PEN->3f;Tool.PENCIL->1.5f;Tool.HIGHLIGHTER->96f});color=brushPrefs.getInt("${tool.name}:color",when(tool){Tool.HIGHLIGHTER->Color.YELLOW;Tool.PENCIL->Color.rgb(153,153,153);else->Color.BLACK});brushPrefs.edit().putString("last_tool",tool.name).apply() }
     fun setEraserTool(tool: EraserTool) { eraserTool = tool;correctionActive=false;eraserSize=brushPrefs.getFloat("eraser:${tool.name}:size",56f);brushPrefs.edit().putString("last_eraser",tool.name).apply(); if(tool==EraserTool.CORRECTION_FLUID){ correctionActive=true;writeTool=Tool.PEN;color=paperColor;strokeWidth=eraserSize;mode=Mode.WRITE }else mode = Mode.ERASE }
     fun setColor(value: Int) { color = value;saveBrush() }
@@ -459,6 +468,8 @@ private class PencilRenderer(private val paperColor:Int) : GLSurfaceView.Rendere
     fun lockIds(strokeIds:Set<String>,textIds:Set<String>){lockedStrokeIds=strokeIds;lockedTextIds=textIds}
     @Synchronized
     fun unlockSelection(){lockedStrokeIds=null;lockedTextIds=null}
+    @Synchronized
+    fun lockedClip()=CanvasClip(strokes=strokes.filter{it.id in lockedStrokeIds.orEmpty()}.map{copyStroke(it)}.toMutableList(),texts=texts.filter{it.id in lockedTextIds.orEmpty()}.toMutableList())
     @Synchronized
     fun moveLocked(dx:Float,dy:Float){lockedStrokeIds?.let{ids->strokes.filter{s->s.id in ids}.forEach{s->s.points.forEach{p->p.x+=dx;p.y+=dy};strokeCache.remove(s.id)}};lockedTextIds?.let{ids->texts.indices.filter{i->texts[i].id in ids}.forEach{i->texts[i]=texts[i].copy(x=texts[i].x+dx,y=texts[i].y+dy)}}}
     @Synchronized

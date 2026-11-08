@@ -122,16 +122,26 @@ class SplitNoteController(
         else if (node != null && library.loadNodes().none { it.id == node?.id }) { dirty=false; clear() }
     }
 
+    /** Shared by the secondary title picker and shortcut routing; never changes the main document. */
+    fun openFromQuickAccess(selected:LibraryNode, requestedPage:Int?):Boolean {
+        if(!enabled||selected.type!=LibraryNodeType.NOTE)return false
+        if(selected.id==mainId()){
+            Toast.makeText(activity,"该笔记已在主笔记中打开，不能同时作为副笔记",Toast.LENGTH_SHORT).show()
+            return false
+        }
+        workspace.cancelGesture()
+        if(!save())return false
+        node=selected;pageCount=0
+        page=if(selected.noteType==FileType.PDF)(requestedPage?:activity.getSharedPreferences("pencil_file_pages",0).getInt(selected.id,0)).coerceAtLeast(0) else 0
+        load(page)
+        return true
+    }
+
     private fun choose() {
         LibraryTreePicker.show(activity, "选择副笔记（可读写）", library.loadNodes(), node?.id,
             selectable = { it.type == LibraryNodeType.NOTE && it.id != mainId() }) { selected ->
             if (!enabled || selected == null || selected.id == mainId()) return@show
-            workspace.cancelGesture()
-            if(!save())return@show
-            node = selected
-            pageCount = 0
-            page = if (selected.noteType == FileType.PDF) activity.getSharedPreferences("pencil_file_pages", 0).getInt(selected.id, 0) else 0
-            load(page)
+            openFromQuickAccess(selected,null)
         }
     }
 
@@ -227,6 +237,10 @@ class SplitNoteController(
         } catch(error:Exception) { Toast.makeText(activity,"副笔记保存失败："+error.message,Toast.LENGTH_LONG).show();false }
     }
     fun syncTools() { canvas.copyToolsFrom(mainCanvas()) }
+    fun transferCanvas() = canvas
+    fun transferDocument():NoteDocument? = document?.takeIf{isReady()}?.copy(strokes=canvas.getStrokes().toMutableList(),texts=canvas.getTextBoxes().toMutableList())
+    fun transferContent() = editor.transferContent()
+    fun applyTransferredDocument(value:NoteDocument) { document=value;canvas.replaceTransferredContent(value.strokes,value.texts);dirty=false;refreshOverlay() }
     fun isReady() = enabled && loaded
     fun undo() { canvas.undo();canvas.afterPendingChanges{save()} }
     fun redo() { canvas.redo();canvas.afterPendingChanges{save()} }

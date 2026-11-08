@@ -97,6 +97,7 @@ class SecondaryNoteEditor(
         doc.images.removeAll{selected(it)};doc.links.removeAll{selected(it.x,it.y)};doc.summaries.removeAll{selected(it.x,it.y)}
         doc.foldedNotes.removeAll{selected(it.x,it.y)};doc.emphasisStars.removeAll{selected(it.x,it.y)}
     }
+    fun transferContent(): SplitTransferContent? = document()?.let{SplitTransferContent.capture(canvas,it,movingImages,movingLinks,movingSummaries,movingFolds,movingStars)}
     private fun lock() {
         val doc=document()?:return
         movingImages.clear();movingLinks.clear();movingSummaries.clear();movingFolds.clear();movingStars.clear()

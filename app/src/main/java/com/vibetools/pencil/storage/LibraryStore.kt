@@ -155,6 +155,27 @@ class LibraryStore(private val context: Context) {
             }.getOrNull()
         }
     }
+    // A durable redo intent keeps a two-document move recoverable after process death.
+    private val transferJournal get() = File(root,"split-transfer.json")
+    init { synchronized(LibraryIo.lock) { recoverSplitTransfer() } }
+    private fun recoverSplitTransfer() {
+        if(!transferJournal.exists())return
+        val intent=SafeFiles.read(transferJournal){JSONObject(it)}
+        val notes=intent.optJSONArray("notes")?:return
+        for(i in 0 until notes.length()){
+            val note=decodeNote(notes.getJSONObject(i))
+            require(note.noteId.matches(Regex("[A-Za-z0-9_-]+"))){"跨笔记移动记录无效"}
+            SafeFiles.write(File(notesDir,"${note.noteId}.json"),encodeNote(note).toString())
+        }
+        SafeFiles.write(transferJournal,"{}")
+    }
+    fun saveSplitTransfer(source:NoteDocument,target:NoteDocument)=synchronized(LibraryIo.lock){
+        requireCurrentGeneration()
+        require(source.noteId!=target.noteId)
+        recoverSplitTransfer()
+        SafeFiles.write(transferJournal,JSONObject().put("notes",JSONArray().put(encodeNote(target)).put(encodeNote(source))).toString())
+        recoverSplitTransfer()
+    }
     fun saveNote(note:NoteDocument) = synchronized(LibraryIo.lock) {
         requireCurrentGeneration()
         val file=File(notesDir,"${note.noteId}.json")

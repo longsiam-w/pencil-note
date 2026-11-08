@@ -12,6 +12,9 @@ import org.json.JSONObject
 import java.util.UUID
 
 class QuickAccessController(private val context:Context,private val panel:LinearLayout,private val library:LibraryStore,private val onOpen:(LibraryNode,Int?)->Unit){
+    private val target=QuickAccessTarget()
+    val controlsSecondary get()=target.secondary
+    fun setSplitEnabled(enabled:Boolean){target.setSplitEnabled(enabled);render()}
     private val prefs=context.getSharedPreferences("pencil_quick_access",Context.MODE_PRIVATE)
     private var group=""
     private var recordPages=true
@@ -98,6 +101,14 @@ class QuickAccessController(private val context:Context,private val panel:Linear
         panel.removeAllViews()
         val header=LinearLayout(context).apply{orientation=LinearLayout.HORIZONTAL}
         header.addView(TextView(context).apply{text="快捷访问";setTypeface(typeface,Typeface.BOLD);setPadding(8,8,8,8)},LinearLayout.LayoutParams(0,-2,1f))
+        header.addView(Button(context).apply{
+            text=if(target.secondary)"副 >" else "< 主"
+            textSize=12f;minWidth=0;minimumWidth=0;setPadding(0,0,0,0)
+            isEnabled=target.splitEnabled
+            contentDescription=if(target.secondary)"快捷访问控制副笔记，点击切换为主笔记" else "快捷访问控制主笔记，点击切换为副笔记"
+            tooltipText=if(target.splitEnabled)contentDescription else "开启分屏后可切换快捷访问的目标"
+            setOnClickListener{target.toggle();render()}
+        },LinearLayout.LayoutParams(48.dp(),40.dp()))
         header.addView(Button(context).apply{text="＋";contentDescription="添加文件快捷方式";setOnClickListener{add()}},LinearLayout.LayoutParams(48.dp(),40.dp()))
         panel.addView(header)
         val list=LinearLayout(context).apply{orientation=LinearLayout.VERTICAL}
@@ -111,7 +122,7 @@ class QuickAccessController(private val context:Context,private val panel:Linear
                 text=node.name;maxLines=2;ellipsize=android.text.TextUtils.TruncateAt.END;setPadding(8,10,4,10)
                 if(node.id==currentId){setTypeface(typeface,Typeface.BOLD);setTextColor(Color.rgb(200,35,35))}
                 setOnClickListener{
-                    openingGroup=group
+                    openingGroup=if(target.secondary)null else group
                     val pageKey="page:$group:${node.id}"
                     val page=if(prefs.contains(pageKey))prefs.getInt(pageKey,0)else if(item.has("page"))item.optInt("page")else null
                     onOpen(node,page)
